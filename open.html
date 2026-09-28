@@ -1,0 +1,84 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Gas Free</title>
+
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: #0b0b0f;
+            font-family: Arial, sans-serif;
+        }
+
+        a {
+            display: block;
+
+            padding: 18px 30px;
+
+            background: white;
+            color: black;
+
+            text-decoration: none;
+
+            border-radius: 14px;
+
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<a id="gasFree">
+    Open Gas Free
+</a>
+
+<script>
+
+    // YOUR GITHUB PAGES URL
+    const dappUrl =
+        "https://mateojoules.github.io/gas-free/";
+
+
+    // TronLink DeepLink parameters
+    const param = {
+
+        url: dappUrl,
+
+        action: "open",
+
+        protocol: "TronLink",
+
+        version: "1.0"
+
+    };
+
+
+    // Encode the parameters
+    const encoded =
+        encodeURIComponent(
+            JSON.stringify(param)
+        );
+
+
+    // Create the TronLink link
+    document.getElementById("gasFree").href =
+        "tronlinkoutside://pull.activity?param="
+        + encoded;
+
+</script>
+
+</body>
+</html>
+```

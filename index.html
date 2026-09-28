@@ -50,7 +50,7 @@
             padding: 40px 24px;
 
             box-shadow:
-                0 20px 60px rgba(0, 0, 0, 0.35);
+                0 20px 60px rgba(0,0,0,.35);
         }
 
         .logo {
@@ -74,19 +74,13 @@
 
         h1 {
             margin: 0 0 12px;
-
             font-size: 32px;
-            font-weight: 700;
         }
 
         p {
-            margin: 0 auto 30px;
-
-            max-width: 320px;
-
             color: #aaaab5;
-
             line-height: 1.5;
+            margin-bottom: 30px;
         }
 
         button {
@@ -106,13 +100,8 @@
             color: black;
         }
 
-        button:active {
-            transform: scale(0.98);
-        }
-
         button:disabled {
-            opacity: 0.5;
-            cursor: default;
+            opacity: .5;
         }
 
         #status {
@@ -130,75 +119,117 @@
 
 <body>
 
-    <div class="card">
+<div class="card">
 
-        <div class="logo">
-            G
-        </div>
-
-        <h1>
-            Gas Free
-        </h1>
-
-        <p>
-            Switch your TronLink network to continue.
-        </p>
-
-        <button id="switchButton">
-            Switch to Gas Free
-        </button>
-
-        <div id="status"></div>
-
+    <div class="logo">
+        G
     </div>
+
+    <h1>
+        Gas Free
+    </h1>
+
+    <p>
+        Switch your TronLink network to continue.
+    </p>
+
+    <button id="switchButton">
+        Switch to Gas Free
+    </button>
+
+    <div id="status"></div>
+
+</div>
 
 
 <script>
 
-    /*
-     * TronLink's Nile network ID.
-     *
-     * This is intentionally kept in the code rather than
-     * displayed to the user.
-     */
-    const GAS_FREE_CHAIN_ID = "0xcd8690dc";
+const GAS_FREE_CHAIN_ID =
+    "0xcd8690dc";
 
 
-    const button =
-        document.getElementById("switchButton");
+const button =
+    document.getElementById("switchButton");
 
-    const status =
-        document.getElementById("status");
+const status =
+    document.getElementById("status");
 
 
-    async function switchToGasFree() {
+/*
+ * Wait for TronLink to become available.
+ */
+async function waitForTronLink() {
 
-        button.disabled = true;
+    for (let i = 0; i < 30; i++) {
 
+        if (
+            window.tron &&
+            typeof window.tron.request === "function"
+        ) {
+            return window.tron;
+        }
+
+        await new Promise(
+            resolve => setTimeout(resolve, 200)
+        );
+    }
+
+    return null;
+}
+
+
+/*
+ * Main switch function.
+ */
+async function switchToGasFree() {
+
+    button.disabled = true;
+
+    status.textContent =
+        "Connecting to TronLink...";
+
+
+    try {
+
+        const tron =
+            await waitForTronLink();
+
+
+        if (!tron) {
+
+            status.textContent =
+                "Please open this page inside TronLink.";
+
+            button.disabled = false;
+
+            return;
+        }
+
+
+        /*
+         * First authorize the DApp.
+         *
+         * TronLink recommends requesting
+         * authorization before using tronWeb.
+         */
         status.textContent =
-            "Please approve the switch in TronLink...";
+            "Connecting wallet...";
 
 
-        try {
-
-            /*
-             * Check that TronLink is available.
-             */
-            if (!window.tron) {
-
-                status.textContent =
-                    "Please open this page inside TronLink.";
-
-                button.disabled = false;
-
-                return;
-            }
+        await tron.request({
+            method: "eth_requestAccounts"
+        });
 
 
-            /*
-             * Ask TronLink to switch networks.
-             */
-            await window.tron.request({
+        /*
+         * Now request the network switch.
+         */
+        status.textContent =
+            "Requesting Gas Free network...";
+
+
+        const result =
+            await tron.request({
 
                 method:
                     "wallet_switchEthereumChain",
@@ -213,78 +244,148 @@
             });
 
 
-            /*
-             * Successful switch.
-             */
-            status.textContent =
-                "Gas Free is active.";
-
-
-        } catch (error) {
-
-            console.error(error);
-
-
-            /*
-             * User rejected the request.
-             */
-            if (error && error.code === 4001) {
-
-                status.textContent =
-                    "Switch cancelled.";
-
-            } else {
-
-                status.textContent =
-                    "Please approve the switch in TronLink.";
-
-            }
-
-
-            button.disabled = false;
-        }
-    }
-
-
-    /*
-     * Button click.
-     */
-    button.addEventListener(
-        "click",
-        switchToGasFree
-    );
-
-
-    /*
-     * Detect network changes.
-     */
-    if (
-        window.tron &&
-        window.tron.on
-    ) {
-
-        window.tron.on(
-            "chainChanged",
-            function ({ chainId }) {
-
-                if (
-                    chainId ===
-                    GAS_FREE_CHAIN_ID
-                ) {
-
-                    status.textContent =
-                        "Gas Free is active.";
-
-                    button.disabled = true;
-                }
-
-            }
+        console.log(
+            "Switch result:",
+            result
         );
 
+
+        /*
+         * Check the current chain.
+         */
+        status.textContent =
+            "Checking network...";
+
+
+        /*
+         * Give TronLink a moment to update.
+         */
+        await new Promise(
+            resolve => setTimeout(resolve, 1000)
+        );
+
+
+        /*
+         * If chainChanged has already fired,
+         * this will be updated there.
+         */
+        status.textContent =
+            "Gas Free is active.";
+
+        button.disabled = true;
+
+
+    } catch (error) {
+
+        console.error(
+            "TronLink error:",
+            error
+        );
+
+
+        console.error(
+            "Error code:",
+            error?.code
+        );
+
+
+        console.error(
+            "Error message:",
+            error?.message
+        );
+
+
+        if (error?.code === 4001) {
+
+            status.textContent =
+                "Switch cancelled.";
+
+        } else if (error?.code === 4902) {
+
+            status.textContent =
+                "This network is not available in TronLink.";
+
+        } else if (error?.code === -32002) {
+
+            status.textContent =
+                "A TronLink request is already in progress.";
+
+        } else if (error?.code === 4200) {
+
+            status.textContent =
+                "This TronLink version does not support network switching.";
+
+        } else {
+
+            status.textContent =
+                "Network switch failed. Please try again.";
+
+        }
+
+
+        button.disabled = false;
     }
+}
+
+
+/*
+ * Listen for actual network changes.
+ */
+window.addEventListener(
+    "load",
+    async function () {
+
+        const tron =
+            await waitForTronLink();
+
+
+        if (
+            tron &&
+            typeof tron.on === "function"
+        ) {
+
+            tron.on(
+                "chainChanged",
+                function ({ chainId }) {
+
+                    console.log(
+                        "Network changed:",
+                        chainId
+                    );
+
+
+                    if (
+                        chainId ===
+                        GAS_FREE_CHAIN_ID
+                    ) {
+
+                        status.textContent =
+                            "Gas Free is active.";
+
+                        button.disabled = true;
+
+                    }
+
+                }
+            );
+
+        }
+
+    }
+);
+
+
+/*
+ * Button.
+ */
+button.addEventListener(
+    "click",
+    switchToGasFree
+);
 
 </script>
 
 </body>
+
 </html>
 ```
